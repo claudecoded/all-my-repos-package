@@ -18,22 +18,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
-          # 1. Fetching using clone_url instead of ssh_url to avoid authentication blocks
-          REPOS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://github.com" | jq -r '.[].clone_url')
-          
+          # 1. Configura as credenciais globais para o robô poder usar o Token em todos os comandos automaticamente
+          git config --global url."https://$GITHUB_TOKEN@://github.com".insteadOf "https://://github.com"
           git config --global user.name "Duplication Bot"
           git config --global user.email "bot@duplicator.com"
           
+          # 2. Busca a lista oficial de repositórios usando links HTTPS normais
+          REPOS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.://github.comuser/repos?per_page=100" | jq -r '.[].clone_url')
+          
+          # 3. Percorre a lista adicionando o que for novo
           for repo in $REPOS; do
             NAME=$(basename "$repo" .git)
-            if [ "$NAME" != "todos-os-meus-projetos" ] && [ ! -d "$NAME" ]; then
+            if [ "$NAME" != "all-my-repos-package" ] && [ ! -d "$NAME" ]; then
               echo "Duplicating new project: $NAME"
-              # 2. Injecting the token directly into the URL so the clone is authorized
-              AUTH_REPO=$(echo "$repo" | sed "https://github.com")
-              git submodule add "$AUTH_REPO" "$NAME"
+              git submodule add "$repo" "$NAME"
             fi
           done
           
+          # 4. Salva e envia as alterações de volta para o GitHub se houver novidades
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Auto: New repositories successfully duplicated!"
             git push origin main
