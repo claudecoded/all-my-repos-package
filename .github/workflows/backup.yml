@@ -1,0 +1,40 @@
+name: Sync New Repositories
+on:
+  schedule:
+    - cron: '0 0 * * *' # This runs automatically every day at midnight
+  workflow_dispatch: # This adds a manual button so you can trigger it anytime
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Central Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_GITHUB_TOKEN }}
+          submodules: true
+
+      - name: Fetch and Add New Repositories
+        run: |
+          # 1. Fetch your user's repository list using the GitHub API
+          REPOS=$(curl -s -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" "https://github.com" | jq -r '.[].ssh_url')
+          
+          # 2. Configure Git bot credentials for the commit
+          git config --global user.name "Backup Bot"
+          git config --global user.email "bot@example.com"
+          
+          # 3. Loop through all found repositories
+          for repo in $REPOS; do
+            NAME=$(basename "$repo" .git)
+            # Skip the backup repository itself to avoid an infinite loop
+            if [ "$NAME" != "all-my-repositories" ] && [ ! -d "$NAME" ]; then
+              echo "Adding new repository: $NAME"
+              git submodule add "$repo" "$NAME"
+            fi
+          done
+          
+          # 4. Push changes back to GitHub if new repos were added
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Auto: added newly detected repositories"
+            git push origin main
+          fi
