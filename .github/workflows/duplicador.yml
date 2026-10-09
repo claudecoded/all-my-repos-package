@@ -18,15 +18,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
-          # 1. Configura as credenciais globais para o robô poder usar o Token em todos os comandos automaticamente
+          # 1. Configure global credentials so the bot can use the Token automatically
           git config --global url."https://$GITHUB_TOKEN@://github.com".insteadOf "https://://github.com"
           git config --global user.name "Duplication Bot"
           git config --global user.email "bot@duplicator.com"
           
-          # 2. Busca a lista oficial de repositórios usando links HTTPS normais
+          # 2. Fetch the official list of repositories using normal HTTPS links
           REPOS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.://github.comuser/repos?per_page=100" | jq -r '.[].clone_url')
           
-          # 3. Percorre a lista adicionando o que for novo
+          # 3. Loop through the list and add what is new
           for repo in $REPOS; do
             NAME=$(basename "$repo" .git)
             if [ "$NAME" != "all-my-repos-package" ] && [ ! -d "$NAME" ]; then
@@ -35,7 +35,7 @@ jobs:
             fi
           done
           
-          # 4. Salva e envia as alterações de volta para o GitHub se houver novidades
+          # 4. Save and push changes back to GitHub if there are updates
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Auto: New repositories successfully duplicated!"
             git push origin main
