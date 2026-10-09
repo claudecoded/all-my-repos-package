@@ -15,8 +15,11 @@ jobs:
           submodules: true
 
       - name: Searching for and duplicating new repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
-          REPOS=$(curl -s -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" "https://github.com" | jq -r '.[].ssh_url')
+          # 1. Fetching using clone_url instead of ssh_url to avoid authentication blocks
+          REPOS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://github.com" | jq -r '.[].clone_url')
           
           git config --global user.name "Duplication Bot"
           git config --global user.email "bot@duplicator.com"
@@ -25,7 +28,9 @@ jobs:
             NAME=$(basename "$repo" .git)
             if [ "$NAME" != "todos-os-meus-projetos" ] && [ ! -d "$NAME" ]; then
               echo "Duplicating new project: $NAME"
-              git submodule add "$repo" "$NAME"
+              # 2. Injecting the token directly into the URL so the clone is authorized
+              AUTH_REPO=$(echo "$repo" | sed "https://github.com")
+              git submodule add "$AUTH_REPO" "$NAME"
             fi
           done
           
