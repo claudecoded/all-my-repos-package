@@ -1,0 +1,35 @@
+name: Duplicate New Repositories
+on:
+  schedule:
+    - cron: '0 0 * * *' # This makes the bot run automatically every day at midnight
+  workflow_dispatch: # This creates a button for you to run the bot manually anytime
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Accessing the central repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_GITHUB_TOKEN }}
+          submodules: true
+
+      - name: Searching for and duplicating new repositories
+        run: |
+          REPOS=$(curl -s -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" "https://github.com" | jq -r '.[].ssh_url')
+          
+          git config --global user.name "Duplication Bot"
+          git config --global user.email "bot@duplicator.com"
+          
+          for repo in $REPOS; do
+            NAME=$(basename "$repo" .git)
+            if [ "$NAME" != "todos-os-meus-projetos" ] && [ ! -d "$NAME" ]; then
+              echo "Duplicating new project: $NAME"
+              git submodule add "$repo" "$NAME"
+            fi
+          done
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Auto: New repositories successfully duplicated!"
+            git push origin main
+          fi
