@@ -1,8 +1,8 @@
 name: Duplicate New Repositories
 on:
   schedule:
-    - cron: '0 0 * * *' # This makes the bot run automatically every day at midnight
-  workflow_dispatch: # This creates a button for you to run the bot manually anytime
+    - cron: '0 0 * * *' # Automatically runs every day at midnight
+  workflow_dispatch: # Allows you to run it manually anytime
 
 jobs:
   sync:
@@ -11,22 +11,19 @@ jobs:
       - name: Accessing the central repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MY_GITHUB_TOKEN }}
           submodules: true
 
       - name: Searching for and duplicating new repositories
-        env:
-          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
-          # 1. Configure global credentials so the bot can use the Token automatically
-          git config --global url."https://$GITHUB_TOKEN@://github.com".insteadOf "https://://github.com"
+          # 1. Configura as credenciais usando o próprio robô do GitHub
+          git config --global url."https://x-access-token:${{ secrets.MY_GITHUB_TOKEN }}@://github.com".insteadOf "https://://github.com"
           git config --global user.name "Duplication Bot"
           git config --global user.email "bot@duplicator.com"
           
-          # 2. Fetch the official list of repositories using normal HTTPS links
-          REPOS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.://github.comuser/repos?per_page=100" | jq -r '.[].clone_url')
+          # 2. Busca os repositórios públicos da sua conta usando seu nome de usuário (claudecoded)
+          REPOS=$(curl -s "https://api.://github.comusers/claudecoded/repos?per_page=100" | jq -r '.[].clone_url')
           
-          # 3. Loop through the list and add what is new
+          # 3. Percorre a lista adicionando os novos
           for repo in $REPOS; do
             NAME=$(basename "$repo" .git)
             if [ "$NAME" != "all-my-repos-package" ] && [ ! -d "$NAME" ]; then
@@ -35,7 +32,7 @@ jobs:
             fi
           done
           
-          # 4. Save and push changes back to GitHub if there are updates
+          # 4. Envia as atualizações de volta
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Auto: New repositories successfully duplicated!"
             git push origin main
